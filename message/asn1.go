@@ -40,8 +40,8 @@ var tagNames = map[int]string{
 	tagInteger:     "INTEGER",
 	tagOctetString: "OCTET STRING",
 	tagEnum:        "ENUM",
-	tagSequence: "SEQUENCE",
-	tagSet:      "SET",
+	tagSequence:    "SEQUENCE",
+	tagSet:         "SET",
 }
 
 const (
@@ -586,6 +586,14 @@ type RawContent []byte
 // don't distinguish between ordered and unordered objects in this code.
 func parseTagAndLength(bytes []byte, initOffset int) (ret TagAndLength, offset int, err error) {
 	offset = initOffset
+	// Validate the first tag byte is present before reading it. The later
+	// bounds checks (in the length parsing below) do not protect this initial
+	// index, so an exhausted buffer (offset >= len(bytes)) would otherwise
+	// panic with index-out-of-range on hostile/truncated input.
+	if offset < 0 || offset >= len(bytes) {
+		err = SyntaxError{"truncated tag or length"}
+		return
+	}
 	b := bytes[offset]
 	offset++
 	ret.Class = int(b >> 6)
